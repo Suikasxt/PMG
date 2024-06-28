@@ -57,6 +57,20 @@ class PMGInference:
         exp_keywords = ', '.join(exp_keywords)
         return [keywords, exp_keywords]
     
+    def generateItemKeywords(self, scene, item):
+        prompt = ITEM_PROMPT[scene]
+        prompt = prompt.replace('<Title/>', item['name'])
+        prompt = prompt.replace('<Genre/>', item['genre'])
+        prompt = prompt.replace('<Intro/>', item.get('intro', ''))
+        # print(prompt)
+        token = self.llama_tokenizer(prompt, return_tensors='pt').input_ids.cuda()
+        output = self.llama_model.generate(token, max_new_tokens=50, do_sample=True, temperature=0.3)
+        output_text = self.llama_tokenizer.decode(output[0][token.shape[-1]:]).split('###')[0]
+        print(output_text)
+
+        keywords = re.findall(r'\d\. ([a-zA-Z\' ]*)', output_text)
+        return keywords
+    
     def clipWork(self, images, text):
         self.CLIP_model, self.CLIP_processor = loadCLIP()
         image = ms.ops.Concat(0)([ms.Tensor(self.CLIP_processor(img)) for img in images])
